@@ -80,8 +80,7 @@ func NewDecoder(r ReadSeekerCloser) (*Decoder, error) {
 
 // sound.Source methods
 
-var _p *Decoder
-var _q sound.Source = _p
+var _ sound.Source = (*Decoder)(nil)
 
 func (d *Decoder) Codec() sample.Codec {
 	return d.fmt.Codec
