@@ -12,7 +12,7 @@ import (
 	"zikichombo.org/sound/sample"
 )
 
-// Type Encoder
+// Encoder encapsulates state for encoding a (pcm) wav file.
 type Encoder struct {
 	w   *os.File
 	h   *hdr
@@ -107,7 +107,7 @@ func (e *Encoder) Send(src []float64) error {
 	return nil
 }
 
-// End closes the encoder and underlying file,
+// Close closes the encoder and underlying file,
 // returning an error if there is a problem.
 //
 // For wav files, the end of an encoding stream requires seeking and

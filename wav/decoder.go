@@ -4,7 +4,7 @@
 package wav
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"time"
 
@@ -13,7 +13,7 @@ import (
 	"zikichombo.org/sound/sample"
 )
 
-// Type Decoder encapsulates state for decoding and seeking
+// Decoder encapsulates state for decoding and seeking
 // a (pcm) wav file.
 type Decoder struct {
 	fmt    *Format
@@ -42,7 +42,7 @@ func NewDecoder(r ReadSeekerCloser) (*Decoder, error) {
 		return nil, e
 	}
 	if fcc != _wave4Cc {
-		return nil, fmt.Errorf("not a wave file\n")
+		return nil, errors.New("not a wave file")
 	}
 	fc, err := riff.findChunk(r, _fmt4Cc)
 	if err != nil {
