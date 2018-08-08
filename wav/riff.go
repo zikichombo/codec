@@ -5,7 +5,7 @@ package wav
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 )
@@ -120,14 +120,14 @@ func readRiff(r io.Reader) (*chunk, fourCc, error) {
 		return nil, fcc, err
 	}
 	if string(riff.fourCc[:]) != "RIFF" {
-		return nil, fcc, fmt.Errorf("not a riff file\n")
+		return nil, fcc, errors.New("not a riff file")
 	}
 	n, e := r.Read(fcc[:])
 	if e != nil {
 		return nil, fcc, e
 	}
 	if n != 4 {
-		return nil, fcc, fmt.Errorf("couldn't read 4\n")
+		return nil, fcc, errors.New("couldn't read 4")
 	}
 	return riff, fcc, nil
 }

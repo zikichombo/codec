@@ -89,7 +89,7 @@ func (f *Format) chunkSize() int {
 // if there is a problem.
 func ParseFormat(r io.Reader, N int) (*Format, error) {
 	if N < fmtStartChunkSize {
-		return nil, fmt.Errorf("format chunk too small: %d\n", N)
+		return nil, fmt.Errorf("format chunk too small: %d", N)
 	}
 	buf := make([]byte, N)
 	n, e := r.Read(buf)
@@ -122,10 +122,10 @@ func ParseFormat(r io.Reader, N int) (*Format, error) {
 		return &Format{channels: channels, freq: aFreq, Codec: sample.SFloat32L}, nil
 	}
 	if tag != _TAG_PCM {
-		return nil, fmt.Errorf("unsupported format tag: %d\n", tag)
+		return nil, fmt.Errorf("unsupported format tag: %d", tag)
 	}
 	if N != fmtStartChunkSize {
-		return nil, fmt.Errorf("bad format chunk size: %d\n", N)
+		return nil, fmt.Errorf("bad format chunk size: %d", N)
 	}
 	var f *Format
 	switch bitDepth {
