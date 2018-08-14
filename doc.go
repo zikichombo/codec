@@ -4,4 +4,4 @@
 // Package codec supplies pluggable sound codecs.
 //
 // attention: open discussion on design in progress. See https://github.com/zikichombo/codec/issues/3
-package codec /* import "zikichombo.org/codec" */
+package codec
