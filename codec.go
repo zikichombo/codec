@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"math"
+	"reflect"
 
 	"zikichombo.org/sound"
 	"zikichombo.org/sound/ops"
@@ -25,14 +25,6 @@ var AnySampleCodec = sample.Codec(-1)
 
 // Codec represents a way of encoding and decoding sound.
 type Codec struct {
-	// Priority defines the preference order when more than one codec
-	// matches an encoding or decoding demand.  Filename extensions can trigger
-	// demands for encoding and decoding.  Magic triggers demands for decoding
-	// All demands may be further qualified by specifying a sample.Codec, with
-	// DefaultSampleCodec being the default.
-	//
-	Priority int
-
 	// Extensions lists the filename extensions which this codec claims to support.
 	// Examples are .wav, .ogg, .caf.  The extension string includes the leading '.'.
 	Extensions []string // Filename extensions
@@ -66,9 +58,26 @@ type Codec struct {
 	// If the codec does not make use of a defined sample.Codec and c is
 	// not AnySampleCodec, then the function should return (nil, ErrUnsupporteSampleCodec).
 	RandomAccess func(ws io.ReadWriteSeeker, c sample.Codec) (sound.RandomAccess, error)
+
+	// PkgPath is the package path of the codec functions above.  It is populated
+	// by RegisterCodec().  RegisterCodec() will only succeed if all non-nil codec
+	// functions have the same package path.  CodecFor() allows callers to select
+	// Codecs by PkgPath in the case of conflicts when there are multiple codecs
+	// available.
+	PkgPath string
 }
 
 var codecs []Codec
+
+// ErrNonUniformCodec is an error indicating a codec has non
+// uniform package paths beween the available codec functions.
+// (Encoder,Decoder,RandomAccess)
+var ErrNonUniformCodec = errors.New("non uniform codec")
+
+func pkgPath(v interface{}) string {
+	typ := reflect.ValueOf(v).Type()
+	return typ.PkgPath()
+}
 
 // RegisterCodec registers a codec so that consumers of this package
 // can treat sound I/O generically and switch between codecs.
@@ -76,23 +85,47 @@ var codecs []Codec
 // A package "p" implementing a Codec can register a codec in its init()
 // function.
 //
-// Codecs registered by zikichombo.org have priority in the range [1000..2000).
-// Lower priority values are considered higher priority.
-//
 // Although c is a pointer, a "deep" copy of c is added to the list of registered codecs.
-func RegisterCodec(c *Codec) {
+//
+// RegisterCodec returns a nil error upon success and ErrNonUniformCodec
+// if any two non-nil functions from c.{Encoder,Decoder,RandomAccess}
+// do not have the same package path.
+func RegisterCodec(c *Codec) error {
+
+	pkgPaths := make([]string, 0, 3)
+	if c.Encoder != nil {
+		pkgPaths = append(pkgPaths, pkgPath(c.Encoder))
+	}
+	if c.Decoder != nil {
+		pkgPaths = append(pkgPaths, pkgPath(c.Decoder))
+	}
+	if c.RandomAccess != nil {
+		pkgPaths = append(pkgPaths, pkgPath(c.RandomAccess))
+	}
+	var thePath string
+	if len(pkgPaths) > 1 {
+		thePath = pkgPaths[0]
+		for i := 1; i < len(pkgPaths); i++ {
+			if pkgPaths[i] != thePath {
+				return ErrNonUniformCodec
+			}
+		}
+	}
+
 	exts := make([]string, len(c.Extensions))
 	for i, ext := range c.Extensions {
 		exts[i] = ext
 	}
 
-	codecs = append(codecs, Codec{Priority: c.Priority,
+	codecs = append(codecs, Codec{
+		PkgPath:            thePath,
 		Extensions:         exts,
 		Sniff:              c.Sniff,
 		DefaultSampleCodec: c.DefaultSampleCodec,
 		Decoder:            c.Decoder,
 		Encoder:            c.Encoder,
 		RandomAccess:       c.RandomAccess})
+	return nil
 }
 
 // CodecFor tries to find a codec based on a filename extension.
@@ -100,50 +133,46 @@ func RegisterCodec(c *Codec) {
 // The returned codec, although a pointer to a struct with fields, should be
 // treated as read-only.  Not doing so may result in race conditions or worse.
 //
-// In case of conflict, the returned codec is a codec with lowest Priority
-// value.  In case of confict taking into account the priority, the first codec
-// from a call to RegisterCodec is returned.  As this might depend on package
-// initialisation order, it is recommended to Codec implementations intended
-// for library use to use even valued priorities so a given application (with a
-// main()) may override package initialistion order by using an appropriate odd Priority
-// value.
-func CodecFor(ext string) (*Codec, error) {
-	minPriority := int(math.MaxInt32)
-	var bestCodec *Codec
+// The function pkgSel may be used to filter or select packages implementing
+// codecs.  If the supplied value is nil, then by default the behavior
+// is as if the function body were "return true".  As multiple codec implementations
+// may exist, the first codec whose package path p is such that pkgSel(p) is true
+// will be returned.
+func CodecFor(ext string, pkgSel func(string) bool) (*Codec, error) {
 	for i := range codecs {
 		c := &codecs[i]
 		for _, codExt := range c.Extensions {
 			if ext == codExt {
-				if c.Priority < minPriority {
-					bestCodec = c
-					minPriority = c.Priority
+				if pkgSel == nil || pkgSel(c.PkgPath) {
+					return c, nil
 				}
 			}
 		}
 	}
-	if bestCodec == nil {
-		return nil, ErrUnknownCodec
-	}
-	return bestCodec, nil
+	return nil, ErrUnknownCodec
 }
 
-// Decoder tries to turn an io.ReadCloser into a sound.Source.
-// If it fails, it returns a non-nil error.
+// Decoder tries to turn an io.ReadCloser into a sound.Source.  If it fails, it
+// returns a non-nil error.
 //
-// If it succeeds, it also returns a sample.Codec which may either
-// be:
+// The function pkgSel may be used to filter or select packages implementing
+// codecs.  If the supplied value is nil, then by default the behavior is as if
+// the function body were "return true".  As multiple codec implementations may
+// exist, the first codec whose package path p is such that pkgSel(p) is true
+// will be returned.
 //
-// 1. AnySampleCodec, indicating there is no fixed sample codec for
-// the decoder behind sound.Source; or
+// If it succeeds, it also returns a sample.Codec which may either be:
+//
+// 1. AnySampleCodec, indicating there is no fixed sample codec for the decoder
+// behind sound.Source; or
+//
 // 2. A sample.Codec which defined the data received in sound.Source.
-func Decoder(r io.ReadCloser) (sound.Source, sample.Codec, error) {
+func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Codec, error) {
 	br := bufio.NewReader(r)
-	minPriority := int(math.MaxInt32)
 	var theCodec *Codec
 	for i := range codecs {
 		c := &codecs[i]
-		if c.Sniff != nil && c.Sniff(br) && c.Priority < minPriority {
-			minPriority = c.Priority
+		if c.Sniff != nil && c.Sniff(br) && (pkgSel == nil || pkgSel(c.PkgPath)) {
 			theCodec = c
 		}
 	}
@@ -156,7 +185,7 @@ func Decoder(r io.ReadCloser) (sound.Source, sample.Codec, error) {
 // Encoder tries to turn an io.WriteCloser into a sound.Sink
 // given a filename extension.
 func Encoder(dst io.WriteCloser, ext string) (sound.Sink, error) {
-	co, err := CodecFor(ext)
+	co, err := CodecFor(ext, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +198,7 @@ func Encoder(dst io.WriteCloser, ext string) (sound.Sink, error) {
 // The sample codec may be AnySampleCodec, which should be used when
 // the caller is not sure of the desired sample codec c.
 func EncoderWith(dst io.WriteCloser, ext string, c sample.Codec) (sound.Sink, error) {
-	co, err := CodecFor(ext)
+	co, err := CodecFor(ext, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +214,8 @@ func Encode(dst io.WriteCloser, src sound.Source, ext string) error {
 
 // EncodeWith encodes a sound.Source to an io.WriteCloser, selecting
 // the codec based on a filename extension ext and desired sample codec co.
+//
+// EncodeWith returns any error that may have been encountered in that process.
 func EncodeWith(dst io.WriteCloser, src sound.Source, ext string, co sample.Codec) error {
 	snk, err := EncoderWith(dst, ext, co)
 	if err != nil {
