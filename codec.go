@@ -23,14 +23,6 @@ var ErrUnsupportedSampleCodec = errors.New("unsupported sample codec")
 // in this interface.
 var AnySampleCodec = sample.Codec(-1)
 
-// IoReadSeekCloser just wraps io.ReadSeeker and io.Closer, as a convenience
-// for specifying a decoding function which can also seek (codec functions
-// always have a Close())
-type IoReadSeekerCloser interface {
-	io.ReadSeeker
-	io.Closer
-}
-
 // Codec represents a way of encoding and decoding sound.
 type Codec struct {
 	// Extensions lists the filename extensions which this codec claims to support.
@@ -46,8 +38,7 @@ type Codec struct {
 	// DefaultSampleCodec gives a default or preferred sample codec for the codec.
 	// Some codecs, such as perception based compressed codecs, don't really have
 	// a defined sample.Codec and should use AnySampleCodec for this field. Codecs
-	// which only have decoding capabilities should also have AnySampleCodec in this
-	// field.
+	// which have only a decoder should also have AnySampleCodec in this field.
 	DefaultSampleCodec sample.Codec
 
 	// Decoder tries to turn an io.ReadCloser into a sound.Source.  In the event
@@ -55,10 +46,6 @@ type Codec struct {
 	// decoding process for the resulting sound.Source, then the second return
 	// value should be AnySampleCodec (if the error return value is nil).
 	Decoder func(io.ReadCloser) (sound.Source, sample.Codec, error)
-
-	// SeekingDecoder is exactly like Decoder but returns a sound.SourceSeeker
-	// given an io.Reader which can seek and close.
-	SeekingDecoder func(IoReadSeekerCloser) (sound.SourceSeeker, sample.Codec, error)
 
 	// Encoder tries to turn an io.WriteCloser into a sound.Sink.
 	// The sample.Codec argument can specify the desired sample Codec.
@@ -71,10 +58,6 @@ type Codec struct {
 	// If the codec does not make use of a defined sample.Codec and c is
 	// not AnySampleCodec, then the function should return (nil, ErrUnsupporteSampleCodec).
 	RandomAccess func(ws io.ReadWriteSeeker, c sample.Codec) (sound.RandomAccess, error)
-}
-
-type codec struct {
-	Codec
 
 	// PkgPath is the package path of the codec functions above.  It is populated
 	// by RegisterCodec().  RegisterCodec() will only succeed if all non-nil codec
@@ -84,7 +67,7 @@ type codec struct {
 	PkgPath string
 }
 
-var codecs []codec
+var codecs []Codec
 
 // ErrNonUniformCodec is an error indicating a codec has non
 // uniform package paths beween the available codec functions.
@@ -105,19 +88,16 @@ func pkgPath(v interface{}) string {
 // Although c is a pointer, a "deep" copy of c is added to the list of registered codecs.
 //
 // RegisterCodec returns a nil error upon success and ErrNonUniformCodec
-// if any two non-nil functions from c.{Encoder,Decoder,SeekingDecoder,RandomAccess}
+// if any two non-nil functions from c.{Encoder,Decoder,RandomAccess}
 // do not have the same package path.
 func RegisterCodec(c *Codec) error {
 
-	pkgPaths := make([]string, 0, 4)
+	pkgPaths := make([]string, 0, 3)
 	if c.Encoder != nil {
 		pkgPaths = append(pkgPaths, pkgPath(c.Encoder))
 	}
 	if c.Decoder != nil {
 		pkgPaths = append(pkgPaths, pkgPath(c.Decoder))
-	}
-	if c.SeekingDecoder != nil {
-		pkgPaths = append(pkgPaths, pkgPath(c.SeekingDecoder))
 	}
 	if c.RandomAccess != nil {
 		pkgPaths = append(pkgPaths, pkgPath(c.RandomAccess))
@@ -137,16 +117,14 @@ func RegisterCodec(c *Codec) error {
 		exts[i] = ext
 	}
 
-	codecs = append(codecs, codec{
-		PkgPath: thePath,
-		Codec: Codec{
-			Extensions:         exts,
-			Sniff:              c.Sniff,
-			DefaultSampleCodec: c.DefaultSampleCodec,
-			Decoder:            c.Decoder,
-			SeekingDecoder:     c.SeekingDecoder,
-			Encoder:            c.Encoder,
-			RandomAccess:       c.RandomAccess}})
+	codecs = append(codecs, Codec{
+		PkgPath:            thePath,
+		Extensions:         exts,
+		Sniff:              c.Sniff,
+		DefaultSampleCodec: c.DefaultSampleCodec,
+		Decoder:            c.Decoder,
+		Encoder:            c.Encoder,
+		RandomAccess:       c.RandomAccess})
 	return nil
 }
 
@@ -166,7 +144,7 @@ func CodecFor(ext string, pkgSel func(string) bool) (*Codec, error) {
 		for _, codExt := range c.Extensions {
 			if ext == codExt {
 				if pkgSel == nil || pkgSel(c.PkgPath) {
-					return &c.Codec, nil
+					return c, nil
 				}
 			}
 		}
@@ -190,48 +168,18 @@ func CodecFor(ext string, pkgSel func(string) bool) (*Codec, error) {
 //
 // 2. A sample.Codec which defined the data received in sound.Source.
 func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Codec, error) {
-	theCodec := sniff(r, pkgSel)
-	if theCodec == nil {
-		return nil, AnySampleCodec, ErrUnknownCodec
-	}
-	return theCodec.Decoder(r)
-}
-
-// SeekingDecoder is exactly like Decoder with respect to all arguments and
-// functionality with the following exceptions
-//
-// 1. The io.ReadCloser must be seekable.
-//
-// 2. It returns a sound.SourceSeeker rather than a sound.Source.
-func SeekingDecoder(r IoReadSeekerCloser, pkgSel func(string) bool) (sound.SourceSeeker, sample.Codec, error) {
-	theCodec := sniff(r, pkgSel)
-	if theCodec == nil {
-		return nil, AnySampleCodec, ErrUnknownCodec
-	}
-	return theCodec.SeekingDecoder(r)
-}
-
-func sniff(r io.Reader, pkgSel func(string) bool) *Codec {
 	br := bufio.NewReader(r)
 	var theCodec *Codec
 	for i := range codecs {
 		c := &codecs[i]
 		if c.Sniff != nil && c.Sniff(br) && (pkgSel == nil || pkgSel(c.PkgPath)) {
-			theCodec = &c.Codec
+			theCodec = c
 		}
 	}
-	return theCodec
-}
-
-// this helps us to deal with closing a bufio.Reader as above.
-// as bufio.Reader is needed for Sniff().
-type brCloser struct {
-	*bufio.Reader
-	io.Closer
-}
-
-func (brc *brCloser) Close() error {
-	return brc.Closer.Close()
+	if theCodec == nil {
+		return nil, AnySampleCodec, ErrUnknownCodec
+	}
+	return theCodec.Decoder(r)
 }
 
 // Encoder tries to turn an io.WriteCloser into a sound.Sink
