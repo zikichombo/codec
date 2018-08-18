@@ -9,7 +9,7 @@ If you are filing a bug, please try to be as specific and thorough as possible:
 what version are you using?  what did you expect?  what happened?  platform?
 go env?
 
-If you are filing a discussion issue, please use the prefix "discussion: " for
+If you are filing a discussion/design issue, please use the prefix "discussion: " for
 the title of your issue.
 
 Thanks
