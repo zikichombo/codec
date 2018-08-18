@@ -26,7 +26,7 @@ var AnySampleCodec = sample.Codec(-1)
 // IoReadSeekCloser just wraps io.ReadSeeker and io.Closer, as a convenience
 // for specifying a decoding function which can also seek (codec functions
 // always have a Close())
-type IoReadSeekerCloser interface {
+type IoReadSeekCloser interface {
 	io.ReadSeeker
 	io.Closer
 }
@@ -57,8 +57,8 @@ type Codec struct {
 	Decoder func(io.ReadCloser) (sound.Source, sample.Codec, error)
 
 	// SeekingDecoder is exactly like Decoder but returns a sound.SourceSeeker
-	// given an io.Reader which can seek and close.
-	SeekingDecoder func(IoReadSeekerCloser) (sound.SourceSeeker, sample.Codec, error)
+	// given an io.ReadSeekClose.
+	SeekingDecoder func(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error)
 
 	// Encoder tries to turn an io.WriteCloser into a sound.Sink.
 	// The sample.Codec argument can specify the desired sample Codec.
@@ -203,7 +203,7 @@ func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Co
 // 1. The io.ReadCloser must be seekable.
 //
 // 2. It returns a sound.SourceSeeker rather than a sound.Source.
-func SeekingDecoder(r IoReadSeekerCloser, pkgSel func(string) bool) (sound.SourceSeeker, sample.Codec, error) {
+func SeekingDecoder(r IoReadSeekCloser, pkgSel func(string) bool) (sound.SourceSeeker, sample.Codec, error) {
 	theCodec := sniff(r, pkgSel)
 	if theCodec == nil {
 		return nil, AnySampleCodec, ErrUnknownCodec
