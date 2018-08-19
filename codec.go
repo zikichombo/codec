@@ -88,7 +88,7 @@ var codecs []codec
 
 // ErrNonUniformCodec is an error indicating a codec has non
 // uniform package paths beween the available codec functions.
-// (Encoder,Decoder,RandomAccess)
+// (Encoder,Decoder,SeekingDecoder,RandomAccess)
 var ErrNonUniformCodec = errors.New("non uniform codec")
 
 func pkgPath(v interface{}) string {
