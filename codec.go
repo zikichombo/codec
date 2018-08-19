@@ -190,11 +190,11 @@ func CodecFor(ext string, pkgSel func(string) bool) (*Codec, error) {
 //
 // 2. A sample.Codec which defined the data received in sound.Source.
 func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Codec, error) {
-	theCodec := sniff(r, pkgSel)
+	theCodec, rr := sniff(r, pkgSel)
 	if theCodec == nil {
 		return nil, AnySampleCodec, ErrUnknownCodec
 	}
-	return theCodec.Decoder(r)
+	return theCodec.Decoder(rr)
 }
 
 // SeekingDecoder is exactly like Decoder with respect to all arguments and
@@ -204,14 +204,21 @@ func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Co
 //
 // 2. It returns a sound.SourceSeeker rather than a sound.Source.
 func SeekingDecoder(r IoReadSeekCloser, pkgSel func(string) bool) (sound.SourceSeeker, sample.Codec, error) {
-	theCodec := sniff(r, pkgSel)
+	theCodec, rr := sniff(r, pkgSel)
 	if theCodec == nil {
 		return nil, AnySampleCodec, ErrUnknownCodec
 	}
-	return theCodec.SeekingDecoder(r)
+	rr.Seeker = r
+	return theCodec.SeekingDecoder(rr)
 }
 
-func sniff(r io.Reader, pkgSel func(string) bool) *Codec {
+type brCloser struct {
+	*bufio.Reader
+	io.Closer
+	io.Seeker
+}
+
+func sniff(r io.ReadCloser, pkgSel func(string) bool) (*Codec, *brCloser) {
 	br := bufio.NewReader(r)
 	var theCodec *Codec
 	for i := range codecs {
@@ -220,18 +227,7 @@ func sniff(r io.Reader, pkgSel func(string) bool) *Codec {
 			theCodec = &c.Codec
 		}
 	}
-	return theCodec
-}
-
-// this helps us to deal with closing a bufio.Reader as above.
-// as bufio.Reader is needed for Sniff().
-type brCloser struct {
-	*bufio.Reader
-	io.Closer
-}
-
-func (brc *brCloser) Close() error {
-	return brc.Closer.Close()
+	return theCodec, &brCloser{Reader: br, Closer: r}
 }
 
 // Encoder tries to turn an io.WriteCloser into a sound.Sink
