@@ -31,6 +31,14 @@ type IoReadSeekCloser interface {
 	io.Closer
 }
 
+// IoReadWriteSeekCloser wraps io.Reader, io.Writer, io.Seeker, and
+// io.Closer as a convenience for specifying a codec function for
+// sound.RandomAccess.
+type IoReadWriteSeekCloser interface {
+	IoReadSeekCloser
+	io.Writer
+}
+
 // Codec represents a way of encoding and decoding sound.
 type Codec struct {
 	// Extensions lists the filename extensions which this codec claims to support.
@@ -70,7 +78,7 @@ type Codec struct {
 	// RandomAccess tries to turn an io.ReadWriteSeeker into sound.RandomAccess.
 	// If the codec does not make use of a defined sample.Codec and c is
 	// not AnySampleCodec, then the function should return (nil, ErrUnsupporteSampleCodec).
-	RandomAccess func(ws io.ReadWriteSeeker, c sample.Codec) (sound.RandomAccess, error)
+	RandomAccess func(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error)
 }
 
 type codec struct {
