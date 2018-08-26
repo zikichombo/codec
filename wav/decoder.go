@@ -97,7 +97,7 @@ func (d *Decoder) Channels() int {
 func (d *Decoder) Receive(dst []float64) (int, error) {
 	nC := d.Channels()
 	if len(dst)%nC != 0 {
-		return 0, sound.ChannelAlignmentError
+		return 0, sound.ErrChannelAlignment
 	}
 	var err error
 	var c, f int
