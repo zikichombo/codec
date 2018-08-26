@@ -86,7 +86,7 @@ func (e *Encoder) put(s float64) error {
 func (e *Encoder) Send(src []float64) error {
 	nC := e.Channels()
 	if len(src)%nC != 0 {
-		return sound.ChannelAlignmentError
+		return sound.ErrChannelAlignment
 	}
 	nF := len(src) / nC
 	var err error
