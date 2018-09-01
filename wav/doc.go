@@ -5,4 +5,6 @@
 //
 // Package wav only supports "PCM" data, which is not compressed, and
 // float32 data whose max/min is taken to be 1,-1, also not compressed.
+//
+// Package wav is part of http://zikichombo.org
 package wav /* import "zikichombo.org/codec/wav" */
