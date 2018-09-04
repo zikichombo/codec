@@ -47,4 +47,11 @@ and have imports going both directions, but the package name
 and thus what is formally in ZikiChombo is "the codec", would 
 differ.
 
+## collaborative imports
+The zikichombo.org/ext module contains collaborative importing 
+at the cost of licensing simplicity for consumers.
+
+
+
+
 
