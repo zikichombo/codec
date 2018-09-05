@@ -24,6 +24,7 @@ table below if common use cases are supported.
 | wav   | +      | +    | +           | -             | -          |
 | flac  | +      | -    | -           | -             | -          |
 | opus  | -      | -    | -           | -             | -          |
+| vorbis | -     | -    | -           | -             | -          |
 | aif   | -      | -    | -           | -             | -          |
 | speex | -      | -    | -           | -             | -          |
 | mp3   | -      | -    | -           | -             | -          |
