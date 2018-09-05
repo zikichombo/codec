@@ -16,7 +16,10 @@ Below we list some common codecs and their status.  Note that
 darwin/iOS may use system codec support independently of whether or
 not go implementations are available.  Some codecs may have limitations
 in their degree of support.  We consider a codec supported in the 
-table below if common use cases are supported.
+table below if common use cases are supported.  We exclude codecs for
+which we know of active patent liabilities, such as aac.  Note that
+some such codecs may have encoders and decoders licensed with the 
+host OS (such as darwin/iOS).
 
 
 | Codec | source | sink | source+seek | random-access | registered |
