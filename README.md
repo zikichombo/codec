@@ -30,10 +30,17 @@ table below if common use cases are supported.
 | mp3   | -      | -    | -           | -             | -          |
 
 ## Ext codecs
-The following are the codecs implemented in ext due to import direction
+The following are the codecs implemented in zikichombo.org/ext due to import direction
 impasse between developers.  Others are found here.
 
 * flac
+
+## 3rd party implementations
+Below lists the implementations of codecs which interoperate with zikichombo and
+are hosted by 3rd parties.
+
+* example, gitlab.com/example-zc-codec
+
 
 
 
