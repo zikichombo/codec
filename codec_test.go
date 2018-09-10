@@ -1,11 +1,17 @@
 package codec
 
-import "testing"
+import (
+	"testing"
+)
 
-// TBD
 func TestRegister(t *testing.T) {
+	RegisterCodec(NullCodec)
 }
 
+// don't know how to easily do this without actual codecs,
+// perhap we test more thoroughly in other packages?
+
+/*
 func TestDecoder(t *testing.T) {
 }
 
@@ -17,3 +23,4 @@ func TestEncoder(t *testing.T) {
 
 func TestRandomAccess(t *testing.T) {
 }
+*/

@@ -199,7 +199,7 @@ func sniff(r io.ReadCloser, pkgSel func(string) bool) (Codec, *brCloser) {
 	var theCodec Codec
 	for i := range codecs {
 		c := &codecs[i]
-		if c.Sniff != nil && c.Sniff(br) && (pkgSel == nil || pkgSel(c.pkgPath)) {
+		if c.Sniff(br) && (pkgSel == nil || pkgSel(c.pkgPath)) {
 			theCodec = c.Codec
 		}
 	}
