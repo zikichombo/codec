@@ -5,7 +5,7 @@
 # Status:
 
 ## Containers
-* [-] ogg
+* [-] ogg (only with vorbis)
 * [-] caf
 * [-] webm
 
@@ -25,9 +25,9 @@ host OS (such as darwin/iOS).
 | Codec | source | sink | source+seek | random-access | registered |
 |-------|--------|------|-------------|---------------|------------|
 | wav   | +      | +    | +           | -             | -          |
-| flac  | +      | -    | -           | -             | -          |
+| flac  | +      | -    | -           | -             | +          |
 | opus  | -      | -    | -           | -             | -          |
-| vorbis | -     | -    | -           | -             | -          |
+| vorbis| +      | -    | +           | -             | +          |
 | aif   | -      | -    | -           | -             | -          |
 | speex | -      | -    | -           | -             | -          |
 | mp3   | -      | -    | -           | -             | -          |
@@ -37,6 +37,7 @@ The following are the codecs implemented in zikichombo.org/ext due to import dir
 impasse between developers.  Others are found here.
 
 * flac
+* vorbis (in ogg container).
 
 ## 3rd party implementations
 Below lists the implementations of codecs which interoperate with zikichombo and
