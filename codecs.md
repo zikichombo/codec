@@ -49,7 +49,8 @@ differ.
 
 ## collaborative imports
 The zikichombo.org/ext module contains collaborative importing 
-at the cost of licensing simplicity for consumers.
+at the cost of licensing simplicity for consumers.  Some 
+codecs are there.
 
 
 
