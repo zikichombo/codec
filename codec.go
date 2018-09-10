@@ -16,7 +16,7 @@ var ErrUnknownCodec = errors.New("unknown codec")
 
 // ErrUnsupportedFunction is an error which is returned
 // when a request is made of a Codec to perform some
-// function it cannot (amongst decoding/encoding/seeking/random access).
+// function it doesn't implement (amongst decoding/encoding/seeking/random access).
 var ErrUnsupportedFunction = errors.New("unsupported function")
 
 // ErrUnsupportedSampleCodec can be used by codec implementations
@@ -69,23 +69,33 @@ type Codec interface {
 	// the decoder does not use a single defined sample.Codec during the entire
 	// decoding process for the resulting sound.Source, then the second return
 	// value should be AnySampleCodec (if the error return value is nil).
-	Decoder() func(io.ReadCloser) (sound.Source, sample.Codec, error)
+	//
+	// Decoder returns ErrUnsupportedFunction if this codec cannot decode.
+	Decoder(io.ReadCloser) (sound.Source, sample.Codec, error)
 
 	// SeekingDecoder is exactly like Decoder but returns a sound.SourceSeeker
 	// given an io.ReadSeekClose.
-	SeekingDecoder() func(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error)
+	//
+	// SeekingDecoder returns ErrUnsupportedFunction if this codec cannot seek
+	// and decode.
+	SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error)
 
 	// Encoder tries to turn an io.WriteCloser into a sound.Sink.
 	// The sample.Codec argument can specify the desired sample Codec.
 	// For encodings which don't use a defined sample.Codec, the function
 	// should return (nil, ErrUnsupportedSampleCodec) in the event c
 	// is not AnySampleCodec.
-	Encoder() func(w io.WriteCloser, c sample.Codec) (sound.Sink, error)
+	//
+	// Encoder returns ErrUnsupportedFunction if this codec cannot encode.
+	Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error)
 
 	// RandomAccess tries to turn an io.ReadWriteSeeker into sound.RandomAccess.
 	// If the codec does not make use of a defined sample.Codec and c is
 	// not AnySampleCodec, then the function should return (nil, ErrUnsupporteSampleCodec).
-	RandomAccess() func(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error)
+	//
+	// RandomAccess returns ErrUnsupportedFunction if the implementation does
+	// not support random access.
+	RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error)
 }
 
 type codec struct {
@@ -161,11 +171,7 @@ func Decoder(r io.ReadCloser, pkgSel func(string) bool) (sound.Source, sample.Co
 	if theCodec == nil {
 		return nil, AnySampleCodec, ErrUnknownCodec
 	}
-	dec := theCodec.Decoder()
-	if dec == nil {
-		return nil, AnySampleCodec, ErrUnsupportedFunction
-	}
-	return dec(rr)
+	return theCodec.Decoder(rr)
 }
 
 // SeekingDecoder is exactly like Decoder with respect to all arguments and
@@ -179,12 +185,8 @@ func SeekingDecoder(r IoReadSeekCloser, pkgSel func(string) bool) (sound.SourceS
 	if theCodec == nil {
 		return nil, AnySampleCodec, ErrUnknownCodec
 	}
-	dec := theCodec.SeekingDecoder()
-	if dec == nil {
-		return nil, AnySampleCodec, ErrUnsupportedFunction
-	}
 	r.Seek(0, io.SeekStart)
-	return dec(r)
+	return theCodec.SeekingDecoder(r)
 }
 
 type brCloser struct {
@@ -211,11 +213,7 @@ func Encoder(dst io.WriteCloser, ext string) (sound.Sink, error) {
 	if err != nil {
 		return nil, err
 	}
-	enc := co.Encoder()
-	if enc == nil {
-		return nil, ErrUnsupportedFunction
-	}
-	return enc(dst, co.DefaultSampleCodec())
+	return co.Encoder(dst, co.DefaultSampleCodec())
 }
 
 // EncoderWith tries to turn an io.WriteCloser into a sound.Sink
@@ -228,11 +226,7 @@ func EncoderWith(dst io.WriteCloser, ext string, c sample.Codec) (sound.Sink, er
 	if err != nil {
 		return nil, err
 	}
-	enc := co.Encoder()
-	if enc == nil {
-		return nil, ErrUnsupportedFunction
-	}
-	return enc(dst, c)
+	return co.Encoder(dst, c)
 }
 
 // Encode encodes a sound.Source to an io.WriteCloser, selecting

@@ -28,18 +28,18 @@ func (c nullCodec) DefaultSampleCodec() sample.Codec {
 	return AnySampleCodec
 }
 
-func (c nullCodec) Decoder() func(io.ReadCloser) (sound.Source, sample.Codec, error) {
-	return nil
+func (c nullCodec) Decoder(io.ReadCloser) (sound.Source, sample.Codec, error) {
+	return nil, AnySampleCodec, ErrUnsupportedFunction
 }
 
-func (c nullCodec) SeekingDecoder() func(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error) {
-	return nil
+func (c nullCodec) SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error) {
+	return nil, AnySampleCodec, ErrUnsupportedFunction
 }
 
-func (c nullCodec) Encoder() func(w io.WriteCloser, c sample.Codec) (sound.Sink, error) {
-	return nil
+func (_ nullCodec) Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error) {
+	return nil, ErrUnsupportedFunction
 }
 
-func (c nullCodec) RandomAccess() func(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error) {
-	return nil
+func (_ nullCodec) RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error) {
+	return nil, ErrUnsupportedFunction
 }
