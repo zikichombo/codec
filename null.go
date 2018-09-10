@@ -8,38 +8,37 @@ import (
 	"zikichombo.org/sound/sample"
 )
 
-type nullCodec struct {
+// Type NullCodec is a type whose values implement Codec and
+// support nothing.  It is useful for embedding codec implementations
+// that only support some of the encoding/decoding functions.
+//
+type NullCodec struct {
 }
 
-// NullCodec implements a codec that supports nothing.  It is useful
-// for embedding in codec implementations that only support some of
-// encoding/decoding functions.
-var NullCodec Codec = nullCodec{}
-
-func (c nullCodec) Extensions() []string {
+func (c NullCodec) Extensions() []string {
 	return nil
 }
 
-func (c nullCodec) Sniff(*bufio.Reader) bool {
+func (c NullCodec) Sniff(*bufio.Reader) bool {
 	return false
 }
 
-func (c nullCodec) DefaultSampleCodec() sample.Codec {
+func (c NullCodec) DefaultSampleCodec() sample.Codec {
 	return AnySampleCodec
 }
 
-func (c nullCodec) Decoder(io.ReadCloser) (sound.Source, sample.Codec, error) {
+func (c NullCodec) Decoder(io.ReadCloser) (sound.Source, sample.Codec, error) {
 	return nil, AnySampleCodec, ErrUnsupportedFunction
 }
 
-func (c nullCodec) SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error) {
+func (c NullCodec) SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error) {
 	return nil, AnySampleCodec, ErrUnsupportedFunction
 }
 
-func (_ nullCodec) Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error) {
+func (_ NullCodec) Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error) {
 	return nil, ErrUnsupportedFunction
 }
 
-func (_ nullCodec) RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error) {
+func (_ NullCodec) RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error) {
 	return nil, ErrUnsupportedFunction
 }
