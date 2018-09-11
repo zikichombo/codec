@@ -217,26 +217,27 @@ func sniff(r io.ReadCloser, pkgSel func(string) bool) (Codec, *brCloser) {
 }
 
 // Encoder tries to turn an io.WriteCloser into a sound.Sink
-// given a filename extension.
-func Encoder(dst io.WriteCloser, ext string) (sound.Sink, error) {
+// given a filename extension and a form (channels + sample rate)
+func Encoder(dst io.WriteCloser, ext string, v sound.Form) (sound.Sink, error) {
 	co, err := CodecFor(ext, nil)
 	if err != nil {
 		return nil, err
 	}
-	return co.Encoder(dst, co.DefaultSampleCodec())
+	return co.Encoder(dst, v, co.DefaultSampleCodec())
 }
 
 // EncoderWith tries to turn an io.WriteCloser into a sound.Sink
-// given a filename extension and a sample.Codec.
+// given a filename extension and a form (channels + sample rate) and
+// a sample.Codec.
 //
 // The sample codec may be AnySampleCodec, which should be used when
 // the caller is not sure of the desired sample codec c.
-func EncoderWith(dst io.WriteCloser, ext string, c sample.Codec) (sound.Sink, error) {
+func EncoderWith(dst io.WriteCloser, ext string, v sound.Form, c sample.Codec) (sound.Sink, error) {
 	co, err := CodecFor(ext, nil)
 	if err != nil {
 		return nil, err
 	}
-	return co.Encoder(dst, c)
+	return co.Encoder(dst, v, c)
 }
 
 // Encode encodes a sound.Source to an io.WriteCloser, selecting
@@ -251,7 +252,7 @@ func Encode(dst io.WriteCloser, src sound.Source, ext string) error {
 //
 // EncodeWith returns any error that may have been encountered in that process.
 func EncodeWith(dst io.WriteCloser, src sound.Source, ext string, co sample.Codec) error {
-	snk, err := EncoderWith(dst, ext, co)
+	snk, err := EncoderWith(dst, ext, src, co)
 	if err != nil {
 		return err
 	}
