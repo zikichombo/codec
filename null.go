@@ -35,10 +35,10 @@ func (c NullCodec) SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.
 	return nil, AnySampleCodec, ErrUnsupportedFunction
 }
 
-func (_ NullCodec) Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error) {
+func (_ NullCodec) Encoder(w io.WriteCloser, v sound.Form, c sample.Codec) (sound.Sink, error) {
 	return nil, ErrUnsupportedFunction
 }
 
-func (_ NullCodec) RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error) {
+func (_ NullCodec) RandomAccess(ws IoReadWriteSeekCloser, v sound.Form, c sample.Codec) (sound.RandomAccess, error) {
 	return nil, ErrUnsupportedFunction
 }
