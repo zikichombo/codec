@@ -81,21 +81,31 @@ type Codec interface {
 	SeekingDecoder(IoReadSeekCloser) (sound.SourceSeeker, sample.Codec, error)
 
 	// Encoder tries to turn an io.WriteCloser into a sound.Sink.
+	//
+	// The sound.Form argument must specify the "form" (number of channels + sample rate)
+	// of the desired encoder.
+	//
 	// The sample.Codec argument can specify the desired sample Codec.
 	// For encodings which don't use a defined sample.Codec, the function
 	// should return (nil, ErrUnsupportedSampleCodec) in the event c
 	// is not AnySampleCodec.
 	//
 	// Encoder returns ErrUnsupportedFunction if this codec cannot encode.
-	Encoder(w io.WriteCloser, c sample.Codec) (sound.Sink, error)
+	Encoder(w io.WriteCloser, v sound.Form, c sample.Codec) (sound.Sink, error)
 
 	// RandomAccess tries to turn an io.ReadWriteSeeker into sound.RandomAccess.
-	// If the codec does not make use of a defined sample.Codec and c is
-	// not AnySampleCodec, then the function should return (nil, ErrUnsupporteSampleCodec).
+	//
+	// The sound.Form argument must specify the "form" (number of channels + sample rate)
+	// of the desired encoder.
+	//
+	// The sample.Codec argument can specify the desired sample Codec.
+	// For encodings which don't use a defined sample.Codec, the function
+	// should return (nil, ErrUnsupportedSampleCodec) in the event c
+	// is not AnySampleCodec.
 	//
 	// RandomAccess returns ErrUnsupportedFunction if the implementation does
 	// not support random access.
-	RandomAccess(ws IoReadWriteSeekCloser, c sample.Codec) (sound.RandomAccess, error)
+	RandomAccess(ws IoReadWriteSeekCloser, v sound.Form, c sample.Codec) (sound.RandomAccess, error)
 }
 
 type codec struct {
